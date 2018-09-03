@@ -1,0 +1,29 @@
+{
+  "name": "carno-php/traced",
+  "license": "MIT",
+  "require": {
+    "carno-php/coroutine": "^1.0",
+    "carno-php/promise": "^1.0",
+    "carno-php/tracing": "^1.0",
+    "carno-php/config": "^1.0",
+    "carno-php/timer": "^1.0",
+    "carno-php/pool": "^1.0",
+    "carno-php/http": "^1.0",
+    "carno-php/net": "^1.0",
+    "carno-php/log-slim": "^1.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Carno\\Traced\\": "src"
+    },
+    "files": [
+      "src/.init.php"
+    ]
+  },
+  "minimum-stability": "dev",
+  "extra": {
+    "branch-alias": {
+      "dev-master": "1.0-dev"
+    }
+  }
+}
