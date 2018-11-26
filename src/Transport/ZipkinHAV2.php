@@ -1,6 +1,6 @@
 <?php
 /**
- * Zipkin http collector
+ * Zipkin http api v2
  * User: moyo
  * Date: 24/11/2017
  * Time: 11:21 AM
@@ -25,7 +25,7 @@ use Carno\Traced\Chips\TransferQueued;
 use Carno\Tracing\Contracts\Transport;
 use Closure;
 
-class ZipkinHTTP implements Transport
+class ZipkinHAV2 implements Transport
 {
     use TransferQueued;
 
@@ -132,7 +132,7 @@ class ZipkinHTTP implements Transport
                  */
                 $response = yield $this->client->perform($request);
                 if ($response->getStatusCode() !== 202) {
-                    logger('tracing')->notice(
+                    logger('traced')->notice(
                         'Server not accepting',
                         [
                             'endpoint' => (string)$request->getUri(),
@@ -142,7 +142,7 @@ class ZipkinHTTP implements Transport
                     );
                 }
             } catch (RequestException | SelectWaitException $e) {
-                logger('tracing')->notice(
+                logger('traced')->notice(
                     'Posting failed',
                     [
                         'endpoint' => (string)$request->getUri(),

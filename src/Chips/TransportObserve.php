@@ -16,7 +16,7 @@ trait TransportObserve
     /**
      * @var Closure[]
      */
-    private $tpOpened = [];
+    private $tpOpening = [];
 
     /**
      * @var Closure[]
@@ -24,13 +24,13 @@ trait TransportObserve
     private $tpClosed = [];
 
     /**
-     * @param Closure $open
-     * @param Closure $close
+     * @param Closure $opening
+     * @param Closure $closed
      */
-    public function transportable(Closure $open, Closure $close) : void
+    public function transportable(Closure $opening, Closure $closed) : void
     {
-        $this->tpOpened[] = $open;
-        $this->tpClosed[] = $close;
+        $this->tpOpening[] = $opening;
+        $this->tpClosed[] = $closed;
     }
 
     /**
@@ -38,8 +38,13 @@ trait TransportObserve
      */
     protected function changed(Transport $transport = null) : void
     {
-        foreach ($transport ? $this->tpOpened : $this->tpClosed as $observer) {
+        foreach ($transport ? $this->tpOpening : $this->tpClosed as $observer) {
             $observer($transport);
         }
+
+        $transport
+            ? logger('traced')->info('Tracing platform activated', ['api' => get_class($transport)])
+            : logger('traced')->info('Tracing platform unloaded')
+        ;
     }
 }

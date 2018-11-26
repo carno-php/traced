@@ -9,6 +9,7 @@
 namespace Carno\Traced\Chips;
 
 use Carno\Net\Address;
+use Carno\Tracing\Contracts\Protocol;
 use Carno\Tracing\Contracts\Transport;
 use Closure;
 
@@ -17,29 +18,39 @@ trait TransportSync
     /**
      * @param string $conf
      * @param string $scheme
-     * @param string $implementer
+     * @param string $transport
+     * @param string $protocol
      * @param Closure $setter
      */
-    private function syncing(string $conf, string $scheme, string $implementer, Closure $setter) : void
-    {
-        config()->watching($conf, static function (string $dsn) use ($scheme, $implementer, $setter) {
+    private function syncing(
+        string $conf,
+        string $scheme,
+        string $transport,
+        string $protocol,
+        Closure $setter
+    ) : void {
+        config()->watching($conf, static function (string $dsn) use ($scheme, $transport, $protocol, $setter) {
             // parsing dsn
             $parsed = parse_url($dsn);
 
+            /**
+             * @var Transport $objTrans
+             * @var Protocol $objProto
+             */
+
             switch ($parsed['scheme']) {
                 case $scheme:
-                    /**
-                     * @var Transport $instance
-                     */
-                    $instance = new $implementer();
-                    $instance->connect(new Address($parsed['host'], $parsed['port'] ?? 80));
+                    $objTrans = new $transport();
+                    $objProto = new $protocol();
+                    $objTrans->connect(new Address($parsed['host'], $parsed['port'] ?? 80));
                     break;
                 default:
-                    $instance = null;
+                    $objTrans = null;
+                    $objProto = null;
             }
 
             // user setter
-            $setter($instance);
+            $setter($objTrans, $objProto);
         });
     }
 }

@@ -1,6 +1,6 @@
 <?php
 /**
- * Zipkin json format
+ * Zipkin json format v2
  * User: moyo
  * Date: 24/11/2017
  * Time: 11:21 AM
@@ -15,7 +15,7 @@ use Carno\Tracing\Contracts\Vars\TAG;
 use Carno\Tracing\Standard\Endpoint;
 use Carno\Tracing\Standard\Span;
 
-class ZipkinJSON implements Protocol
+class ZipkinJFV2 implements Protocol
 {
     /**
      * @param Span $span

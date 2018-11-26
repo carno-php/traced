@@ -13,9 +13,10 @@ use Carno\Promise\Promised;
 use Carno\Traced\Chips\TransportObserve;
 use Carno\Traced\Chips\TransportSync;
 use Carno\Traced\Contracts\Observer;
-use Carno\Traced\Protocol\ZipkinJSON;
+use Carno\Traced\Protocol\AlwaysNone;
+use Carno\Traced\Protocol\ZipkinJFV2;
 use Carno\Traced\Transport\Blackhole;
-use Carno\Traced\Transport\ZipkinHTTP;
+use Carno\Traced\Transport\ZipkinHAV2;
 use Carno\Traced\Utils\Environment;
 use Carno\Tracing\Contracts\Carrier;
 use Carno\Tracing\Contracts\Env;
@@ -55,13 +56,19 @@ class Zipkin implements Platform, Observer
     {
         $this->env = new Environment;
         $this->carrier = new HTTP;
-        $this->protocol = new ZipkinJSON;
 
-        $this->syncing('tracing.addr', 'http', ZipkinHTTP::class, function (Transport $transport = null) {
-            $this->transport && $this->transport->disconnect();
-            $this->transport = $transport;
-            $this->changed($transport);
-        });
+        $this->syncing(
+            'tracing.addr',
+            'zipkin',
+            ZipkinHAV2::class,
+            ZipkinJFV2::class,
+            function (Transport $transport = null, Protocol $protocol = null) {
+                $this->transport && $this->transport->disconnect();
+                $this->transport = $transport;
+                $this->protocol = $protocol;
+                $this->changed($transport);
+            }
+        );
     }
 
     /**
@@ -101,7 +108,7 @@ class Zipkin implements Platform, Observer
      */
     public function serializer() : Protocol
     {
-        return $this->protocol;
+        return $this->protocol ?? new AlwaysNone;
     }
 
     /**

@@ -13,8 +13,8 @@ use Closure;
 interface Observer
 {
     /**
-     * @param Closure $open
-     * @param Closure $close
+     * @param Closure $opening
+     * @param Closure $closed
      */
-    public function transportable(Closure $open, Closure $close) : void;
+    public function transportable(Closure $opening, Closure $closed) : void;
 }
