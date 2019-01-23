@@ -33,7 +33,7 @@ class Environment implements Env
     {
         return [
             TAG::HOSTNAME => $this->hostname,
-            TAG::DEV_LANG => 'php',
+            TAG::LANG_EXE => 'php',
         ];
     }
 }
