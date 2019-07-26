@@ -23,10 +23,14 @@ class Platforms extends Component implements Bootable
      */
     public function starting(Application $app) : void
     {
-        $zpk = new Zipkin;
+        $zpk = new Zipkin($app->conf());
 
         DI::set(Platform::class, $zpk);
         DI::set(Observer::class, $zpk);
+
+        $app->starting()->add(static function () use ($zpk) {
+            return $zpk->init();
+        });
 
         $app->stopping()->add(static function () use ($zpk) {
             return $zpk->leave();

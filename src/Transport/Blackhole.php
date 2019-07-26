@@ -17,8 +17,9 @@ class Blackhole implements Transport
 {
     /**
      * @param Address $endpoint
+     * @param string $identify
      */
-    public function connect(Address $endpoint) : void
+    public function connect(Address $endpoint, string $identify = null) : void
     {
         // do nothing
     }

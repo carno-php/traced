@@ -30,11 +30,6 @@ class ZipkinHAV2 implements Transport
     use TransferQueued;
 
     /**
-     * HTTP API endpoint
-     */
-    private const API = '/api/v2/spans';
-
-    /**
      * batch operating
      */
     private const BATCH_INV = 1500;
@@ -45,6 +40,11 @@ class ZipkinHAV2 implements Transport
      * @var Address
      */
     private $endpoint = null;
+
+    /**
+     * @var string
+     */
+    private $path = '/api/v2/spans';
 
     /**
      * @var Client
@@ -58,18 +58,21 @@ class ZipkinHAV2 implements Transport
 
     /**
      * @param Address $endpoint
+     * @param string $identify
      */
-    public function connect(Address $endpoint) : void
+    public function connect(Address $endpoint, string $identify = null) : void
     {
         $this->options(self::BATCH_PACK, self::BATCH_STACK);
 
-        $this->endpoint = $endpoint;
+        $this->endpoint = $endpoint->port() > 0 ? $endpoint : new Address($endpoint->host(), 80);
+
+        $this->path = $identify ?? $this->path;
 
         $this->client = new Client(
-            (new HOptions)
+            (new HOptions())
                 ->setTimeouts(1000)
-                ->keepalive(new POptions(1, 10, 1, 1, 90, 30, 0, 1000, 800), "zipkin:{$endpoint}"),
-            $endpoint
+                ->keepalive(new POptions(1, 10, 1, 1, 90, 30, 0, 1000, 800), "zipkin:{$this->endpoint}"),
+            $this->endpoint
         );
 
         $this->daemon = Timer::loop(self::BATCH_INV, function () {
@@ -120,7 +123,7 @@ class ZipkinHAV2 implements Transport
         $this->spouting(co(function (array $spans) use ($then) {
             $request = new Request(
                 'POST',
-                new Uri('http', $this->endpoint->host(), $this->endpoint->port(), self::API),
+                new Uri('http', $this->endpoint->host(), $this->endpoint->port(), $this->path),
                 [
                     'Content-Type' => 'application/json',
                 ],
@@ -131,7 +134,7 @@ class ZipkinHAV2 implements Transport
                  * @var Response $response
                  */
                 $response = yield $this->client->perform($request);
-                if ($response->getStatusCode() !== 202) {
+                if ((int)($response->getStatusCode() / 100) !== 2) {
                     logger('traced')->notice(
                         'Server not accepting',
                         [

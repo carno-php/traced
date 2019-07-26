@@ -8,6 +8,8 @@
 
 namespace Carno\Traced\Chips;
 
+use Carno\Config\Config;
+use Carno\Container\DI;
 use Carno\Net\Address;
 use Carno\Tracing\Contracts\Protocol;
 use Carno\Tracing\Contracts\Transport;
@@ -16,37 +18,33 @@ use Closure;
 trait TransportSync
 {
     /**
+     * @param Config $source
      * @param string $conf
-     * @param string $scheme
-     * @param string $transport
-     * @param string $protocol
+     * @param array $schemes
      * @param Closure $setter
      */
     private function syncing(
+        Config $source,
         string $conf,
-        string $scheme,
-        string $transport,
-        string $protocol,
+        array $schemes,
         Closure $setter
     ) : void {
-        config()->watching($conf, static function (string $dsn) use ($scheme, $transport, $protocol, $setter) {
+        $source->watching($conf, static function (string $dsn) use ($schemes, $setter) {
             // parsing dsn
-            $parsed = parse_url($dsn);
+            $parsed = parse_url($dsn) ?: [];
 
             /**
              * @var Transport $objTrans
              * @var Protocol $objProto
              */
 
-            switch ($parsed['scheme']) {
-                case $scheme:
-                    $objTrans = new $transport();
-                    $objProto = new $protocol();
-                    $objTrans->connect(new Address($parsed['host'], $parsed['port'] ?? 80));
-                    break;
-                default:
-                    $objTrans = null;
-                    $objProto = null;
+            $objTrans = $objProto = null;
+
+            if ($platform = $schemes[$parsed['scheme']] ?? null) {
+                [$transport, $protocol] = $platform;
+                $objTrans = DI::object($transport);
+                $objProto = DI::object($protocol);
+                $objTrans->connect(new Address($parsed['host'], $parsed['port']), $parsed['path'] ?? null);
             }
 
             // user setter
