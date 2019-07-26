@@ -1,0 +1,26 @@
+language: php
+
+php:
+- '7.1'
+- '7.2'
+- '7.3'
+
+dist: trusty
+sudo: false
+
+cache:
+  directories:
+  - ~/.composer
+  - ~/.php-ext
+
+before_install:
+- source <(curl -sL https://github.com/carno-php/travis-ci/raw/master/tests-prepare.sh)
+
+install:
+- composer update
+
+script:
+- testing
+
+after_success:
+- coveralls
