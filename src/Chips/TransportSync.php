@@ -14,6 +14,7 @@ use Carno\Net\Address;
 use Carno\Tracing\Contracts\Protocol;
 use Carno\Tracing\Contracts\Transport;
 use Closure;
+use Throwable;
 
 trait TransportSync
 {
@@ -22,33 +23,44 @@ trait TransportSync
      * @param string $conf
      * @param array $schemes
      * @param Closure $setter
+     * @param Closure $failure
      */
     private function syncing(
         Config $source,
         string $conf,
         array $schemes,
-        Closure $setter
+        Closure $setter,
+        Closure $failure = null
     ) : void {
-        $source->watching($conf, static function (string $dsn) use ($schemes, $setter) {
+        $source->watching($conf, static function (string $dsn) use ($schemes, $setter, $failure) {
             // parsing dsn
             $parsed = parse_url($dsn) ?: [];
 
             /**
-             * @var Transport $objTrans
-             * @var Protocol $objProto
+             * @var Transport $transfer
+             * @var Protocol $codec
              */
 
-            $objTrans = $objProto = null;
+            $transfer = $codec = null;
 
             if ($platform = $schemes[$parsed['scheme']] ?? null) {
                 [$transport, $protocol] = $platform;
-                $objTrans = DI::object($transport);
-                $objProto = DI::object($protocol);
-                $objTrans->connect(new Address($parsed['host'], $parsed['port']), $parsed['path'] ?? null);
+
+                $transfer = DI::object($transport);
+                $codec = DI::object($protocol);
+
+                try {
+                    $transfer->connect(
+                        new Address($parsed['host'], $parsed['port'] ?? null),
+                        $parsed['path'] ?? null
+                    );
+                } catch (Throwable $e) {
+                    $failure && $failure($e);
+                }
             }
 
             // user setter
-            $setter($objTrans, $objProto);
+            $setter($transfer, $codec);
         });
     }
 }

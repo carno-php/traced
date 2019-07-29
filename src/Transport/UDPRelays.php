@@ -30,6 +30,11 @@ class UDPRelays implements Transport
     private $identify = 'unknown';
 
     /**
+     * @var bool
+     */
+    private $uxdomain = false;
+
+    /**
      * @var Closure
      */
     private $sender = null;
@@ -45,24 +50,16 @@ class UDPRelays implements Transport
     private $client = null;
 
     /**
-     * UDPRelays constructor.
-     */
-    public function __construct()
-    {
-        if (class_exists('\\Swoole\\Client')) {
-            $this->mkSwoole();
-        } elseif (function_exists('socket_create')) {
-            $this->mkSockets();
-        }
-    }
-
-    /**
      */
     private function mkSwoole() : void
     {
-        $this->client = new Client(SWOOLE_SOCK_UDP, PHP_SAPI === 'cli' ? SWOOLE_SOCK_ASYNC : SWOOLE_SOCK_SYNC);
+        $this->client = new Client(
+            $this->uxdomain ? SWOOLE_SOCK_UNIX_DGRAM : SWOOLE_SOCK_UDP,
+            PHP_SAPI === 'cli' ? SWOOLE_SOCK_ASYNC : SWOOLE_SOCK_SYNC
+        );
+        $this->client->connect($this->endpoint->host(), $this->endpoint->port());
         $this->sender = function (string $data) {
-            $this->client->sendto($this->endpoint->host(), $this->endpoint->port(), $data);
+            @$this->client->send($data);
         };
     }
 
@@ -70,9 +67,13 @@ class UDPRelays implements Transport
      */
     private function mkSockets() : void
     {
-        $this->socket = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
+        $this->socket = socket_create(
+            $this->uxdomain ? AF_UNIX : AF_INET,
+            SOCK_DGRAM,
+            $this->uxdomain ? IPPROTO_IP : SOL_UDP
+        );
         $this->sender = function (string $data) {
-            socket_sendto(
+            @socket_sendto(
                 $this->socket,
                 $data,
                 strlen($data),
@@ -84,13 +85,36 @@ class UDPRelays implements Transport
     }
 
     /**
+     */
+    private function initialize() : void
+    {
+        if (class_exists('\\Swoole\\Client')) {
+            $this->mkSwoole();
+        } elseif (function_exists('socket_create')) {
+            $this->mkSockets();
+        }
+    }
+
+    /**
      * @param Address $endpoint
      * @param string $identify
      */
     public function connect(Address $endpoint, string $identify = null) : void
     {
-        $this->endpoint = $endpoint;
-        $this->identify = trim($identify, " /\t\n");
+        $trim = " /\t\n";
+
+        if ($endpoint->host() === '~') {
+            $identify = rtrim($identify, $trim);
+            $this->uxdomain = true;
+            $this->identify = substr($identify, ($ips = strrpos($identify, '/')) + 1);
+            $this->endpoint = new Address(substr($identify, 0, $ips));
+        } else {
+            $identify = trim($identify, $trim);
+            $this->identify = $identify;
+            $this->endpoint = $endpoint;
+        }
+
+        $this->initialize();
     }
 
     /**

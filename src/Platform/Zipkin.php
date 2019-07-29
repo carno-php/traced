@@ -26,6 +26,7 @@ use Carno\Tracing\Contracts\Platform;
 use Carno\Tracing\Contracts\Protocol;
 use Carno\Tracing\Contracts\Transport;
 use Carno\Tracing\Standard\Carriers\HTTP;
+use Throwable;
 
 class Zipkin implements Platform, Observer
 {
@@ -78,14 +79,21 @@ class Zipkin implements Platform, Observer
             $this->conf,
             'tracing.addr',
             [
-                'zk-udp' => [UDPRelays::class, ZipkinJFV2::class],
                 'zipkin' => [ZipkinHAV2::class, ZipkinJFV2::class],
+                'udp' => [UDPRelays::class, ZipkinJFV2::class],
             ],
             function (Transport $transport = null, Protocol $protocol = null) {
                 $this->transport && $this->transport->disconnect();
                 $this->transport = $transport;
                 $this->protocol = $protocol;
                 $this->changed($transport);
+            },
+            static function (Throwable $e) {
+                logger('traced')->warning('Transport initialize failed', [
+                    'p' => 'zipkin',
+                    'ec' => get_class($e),
+                    'em' => $e->getMessage(),
+                ]);
             }
         );
 
