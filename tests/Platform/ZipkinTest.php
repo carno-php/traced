@@ -24,7 +24,7 @@ class ZipkinTest extends TestCase
 
         $app->starting()->perform();
 
-        $app->conf()->set('tracing.addr', 'zk-udp://127.0.0.1:1234/zipkin');
+        $app->conf()->set('tracing.addr', 'udp://127.0.0.1:1234/zipkin');
 
         /**
          * @var Platform $zipkin

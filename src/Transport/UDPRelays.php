@@ -55,8 +55,14 @@ class UDPRelays implements Transport
     {
         $this->client = new Client(
             $this->uxdomain ? SWOOLE_SOCK_UNIX_DGRAM : SWOOLE_SOCK_UDP,
-            PHP_SAPI === 'cli' ? SWOOLE_SOCK_ASYNC : SWOOLE_SOCK_SYNC
+            ($async = PHP_SAPI === 'cli') ? SWOOLE_SOCK_ASYNC : SWOOLE_SOCK_SYNC
         );
+        $async && $this->client->on('connect', static function () {
+            // do nothing
+        });
+        $async && $this->client->on('receive', static function () {
+            // do nothing
+        });
         $this->client->connect($this->endpoint->host(), $this->endpoint->port());
         $this->sender = function (string $data) {
             @$this->client->send($data);
@@ -122,8 +128,15 @@ class UDPRelays implements Transport
      */
     public function disconnect() : Promised
     {
-        $this->socket && socket_close($this->socket);
-        $this->client && $this->client = null;
+        if ($this->socket) {
+            @socket_close($this->socket);
+        }
+
+        if ($this->client) {
+            @$this->client->close();
+            $this->client = null;
+        }
+
         return Promise::resolved();
     }
 
